@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 
 const AIChat = ({ apiBaseUrl }) => {
   const [messages, setMessages] = useState([
-    { sender: 'assistant', text: 'Hello! I am your FuelSense Driving Analyst. Ask me anything about your driving score, fuel pricing, or refueling decisions.' }
+    { sender: 'assistant', text: 'Welcome to your FuelSense Copilot. Ask me how to optimize your driving style, project your monthly budget, or check the best time to refuel.' }
   ]);
   const [inputValue, setInputValue] = useState('');
   const [loading, setLoading] = useState(false);
@@ -51,7 +51,7 @@ const AIChat = ({ apiBaseUrl }) => {
 
   return (
     <div className="ai-chat-container">
-      <h3 className="section-title">Ask AI Advisor</h3>
+      <h3 className="section-title">Interactive AI Copilot</h3>
       
       <div className="chat-history">
         {messages.map((msg, index) => (
@@ -78,7 +78,7 @@ const AIChat = ({ apiBaseUrl }) => {
           type="text"
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
-          placeholder="Ask why eco score is low..."
+          placeholder="Ask copilot about score, costs, or emissions..."
           className="chat-input"
           disabled={loading}
         />

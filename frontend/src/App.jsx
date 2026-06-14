@@ -57,10 +57,9 @@ function App() {
       }
     } catch (err) {
       console.error('Error fetching state:', err);
-      // Fail silently unless it's a persistent error, freeze state
       setError({
         code: 'NETWORK_ERROR',
-        message: 'Could not connect to FuelSense vehicle intelligence stream.'
+        message: "Unable to connect to the vehicle's onboard diagnostics system. Please check your backend connection."
       });
     }
   };
@@ -122,7 +121,7 @@ function App() {
         
         <div className={`live-indicator ${currentStatus !== 'RUNNING' ? 'live-indicator-stopped' : ''}`}>
           <span className={`pulse-dot ${currentStatus !== 'RUNNING' ? 'pulse-dot-stopped' : ''}`} />
-          <span>{currentStatus === 'RUNNING' ? 'Live Stream' : currentStatus}</span>
+          <span>{currentStatus === 'RUNNING' ? 'Live Telemetry' : currentStatus}</span>
         </div>
       </header>
 
@@ -130,17 +129,17 @@ function App() {
       {currentStatus === 'RESETTING' && (
         <div className="loading-overlay">
           <div className="spinner" />
-          <span className="loading-text">Reinitializing vehicle feed...</span>
+          <span className="loading-text">Connecting to Telemetry Feed...</span>
         </div>
       )}
 
       {/* Error overlay */}
       {error && (
         <div className="error-overlay">
-          <div className="error-title">Telemetry Signal Lost</div>
+          <div className="error-title">Telemetry Signal Offline</div>
           <p className="error-msg">{error.message}</p>
           <button onClick={fetchState} className="chat-send-btn" style={{ width: 'auto', padding: '8px 16px', fontSize: '11px', fontWeight: 'bold' }}>
-            Retry Connection
+            Reconnect Signal
           </button>
         </div>
       )}
@@ -165,25 +164,25 @@ function App() {
             label="Fuel Efficiency"
             value={analytics.fuel_efficiency?.toFixed(1) || '0.0'}
             unit="L/100km"
-            subLabel="Standardized"
+            subLabel="Standardized fuel consumption"
           />
           <MetricCard
             label="Cost Index"
             value={analytics.cost_per_km ? `RM${analytics.cost_per_km.toFixed(3)}` : 'RM0.000'}
             unit="/ km"
-            subLabel="Attributed cost"
+            subLabel="Projected cost per kilometer"
           />
           <MetricCard
             label="Projected Spend"
             value={analytics.monthly_spend_myr ? `RM${analytics.monthly_spend_myr.toFixed(2)}` : 'RM0.00'}
             unit="/ mo"
-            subLabel="Based on 1.2k km"
+            subLabel="Estimated monthly spend (1.2k km)"
           />
           <MetricCard
             label="Carbon Footprint"
             value={analytics.co2_kg?.toFixed(1) || '0.0'}
             unit="kg CO₂"
-            subLabel="Projected spend equivalent"
+            subLabel="Projected monthly CO₂ footprint"
           />
         </div>
 

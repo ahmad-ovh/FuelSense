@@ -4,10 +4,10 @@ const ScenarioFAB = ({ onSelectScenario, activeScenarioId, currentStatus }) => {
   const [isOpen, setIsOpen] = useState(false);
 
   const scenariosList = [
-    { id: 'A', name: 'Urban Congestion', desc: 'High Idle & Inefficiency' },
-    { id: 'B', name: 'Highway Efficiency', desc: 'Optimal Cruising' },
-    { id: 'C', name: 'Aggressive Driving', desc: 'Spiky High Consumption' },
-    { id: 'D', name: 'Mixed Weekly Driving', desc: 'Balanced Realism' },
+    { id: 'A', name: 'Urban Congestion', desc: 'Stop-and-go heavy city traffic' },
+    { id: 'B', name: 'Highway Cruising', desc: 'Optimal high-speed fuel efficiency' },
+    { id: 'C', name: 'Aggressive Driving', desc: 'High RPM performance driving stress-test' },
+    { id: 'D', name: 'Mixed Commute', desc: 'Balanced real-world weekly driving cycle' },
   ];
 
   const handleSelect = (id) => {
@@ -21,8 +21,8 @@ const ScenarioFAB = ({ onSelectScenario, activeScenarioId, currentStatus }) => {
       {isOpen && (
         <div className="fab-menu">
           <div className="fab-menu-header">
-            <span>Select Scenario Stream</span>
-            <small>Changes live vehicle telemetry</small>
+            <span>Simulate Driving Conditions</span>
+            <small>Switches the telemetry stream profile</small>
           </div>
           {scenariosList.map((sc) => (
             <button

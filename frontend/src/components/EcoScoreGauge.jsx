@@ -1,7 +1,6 @@
 import React from 'react';
 
 const EcoScoreGauge = ({ score = 100 }) => {
-  // SVG Gauge calculations (radius = 50, strokeWidth = 10)
   const radius = 50;
   const strokeWidth = 8;
   const circumference = 2 * Math.PI * radius; // ~314.16
@@ -11,7 +10,7 @@ const EcoScoreGauge = ({ score = 100 }) => {
 
   // Determine color based on score thresholds from design-spec.md Section 4.1
   let color = '#ef4444'; // Red (0-39)
-  let label = 'Urgent Improvement';
+  let label = 'Highly Inefficient';
   if (score >= 70) {
     color = '#10b981'; // Green (70-100)
     label = 'Optimal Efficiency';
@@ -56,7 +55,7 @@ const EcoScoreGauge = ({ score = 100 }) => {
         </svg>
         <div className="eco-gauge-text">
           <span className="eco-score-number" style={{ color }}>{Math.round(score)}</span>
-          <span className="eco-score-lbl">Score</span>
+          <span className="eco-score-lbl">Index</span>
         </div>
       </div>
       <div className="eco-gauge-label" style={{ color }}>{label}</div>

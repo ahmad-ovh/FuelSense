@@ -26,7 +26,7 @@ const BehaviorBreakdownBar = ({ idlePct = 0, drivingMode = 'city' }) => {
 
   return (
     <div className="behavior-container">
-      <h3 className="section-title">Behavioral Breakdown</h3>
+      <h3 className="section-title">Driving Style Breakdown</h3>
       
       {/* Segmented Progress Bar */}
       <div className="breakdown-bar-wrapper">
@@ -57,21 +57,21 @@ const BehaviorBreakdownBar = ({ idlePct = 0, drivingMode = 'city' }) => {
         <div className="legend-item">
           <span className="dot dot-idle" />
           <div className="legend-text">
-            <span className="legend-label">Idle</span>
+            <span className="legend-label">Idle (Waste)</span>
             <span className="legend-val">{idle}%</span>
           </div>
         </div>
         <div className="legend-item">
           <span className="dot dot-city" />
           <div className="legend-text">
-            <span className="legend-label">City</span>
+            <span className="legend-label">City (Stop-Go)</span>
             <span className="legend-val">{city}%</span>
           </div>
         </div>
         <div className="legend-item">
           <span className="dot dot-highway" />
           <div className="legend-text">
-            <span className="legend-label">Highway</span>
+            <span className="legend-label">Highway (Cruise)</span>
             <span className="legend-val">{highway}%</span>
           </div>
         </div>

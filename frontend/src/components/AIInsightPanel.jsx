@@ -6,7 +6,7 @@ const AIInsightPanel = ({ aiInsights = {} }) => {
   if (status === 'loading' || !explanation || explanation.includes('Generating report...')) {
     return (
       <div className="ai-insight-panel">
-        <h3 className="section-title">AI Advisor Insights</h3>
+        <h3 className="section-title">AI Driving Performance Report</h3>
         <div className="insight-grid">
           <div className="insight-item insight-skeleton">
             <div className="shimmer" style={{ width: '30%', height: '10px', borderRadius: '4px', marginBottom: '8px' }} />
@@ -56,7 +56,7 @@ const AIInsightPanel = ({ aiInsights = {} }) => {
 
   return (
     <div className="ai-insight-panel">
-      <h3 className="section-title">AI Advisor Insights</h3>
+      <h3 className="section-title">AI Driving Performance Report</h3>
       <div className="insight-grid">
         <div className="insight-item insight-cause">
           <div className="insight-lbl-badge font-semibold">CAUSE</div>
