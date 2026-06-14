@@ -4,6 +4,7 @@ const AIInsightPanel = ({ aiInsights = {}, scenarioId, apiBaseUrl }) => {
   const { explanation = '', status = '' } = aiInsights;
   const [streamedText, setStreamedText] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
+  const [finalText, setFinalText] = useState('');
   const activeStreamRef = useRef(null);
 
   useEffect(() => {
@@ -12,6 +13,13 @@ const AIInsightPanel = ({ aiInsights = {}, scenarioId, apiBaseUrl }) => {
       startStreamingInsights();
     }
   }, [status, scenarioId]);
+
+  useEffect(() => {
+    // Clear local text cache once backend catches up
+    if (status === 'done') {
+      setFinalText('');
+    }
+  }, [status]);
 
   const startStreamingInsights = async () => {
     if (activeStreamRef.current) return;
@@ -53,6 +61,7 @@ const AIInsightPanel = ({ aiInsights = {}, scenarioId, apiBaseUrl }) => {
           }
         }
       }
+      setFinalText(accumulatedText);
     } catch (e) {
       console.error('Error streaming insights:', e);
     } finally {
@@ -61,8 +70,8 @@ const AIInsightPanel = ({ aiInsights = {}, scenarioId, apiBaseUrl }) => {
     }
   };
 
-  // Use the streamed text if active, otherwise fallback to the central cached state
-  const displayText = isStreaming ? streamedText : (status === 'loading' ? '' : explanation);
+  // Use the streamed text if active, otherwise fallback to local completed text or central cached state
+  const displayText = isStreaming ? streamedText : (finalText ? finalText : (status === 'loading' ? '' : explanation));
 
   // Helper to parse Cause, Effect, and Action from the explanation text dynamically
   const parseInsights = (text) => {

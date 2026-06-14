@@ -35,6 +35,7 @@ class FuelPriceContextSchema(BaseModel):
 class AIInsightsSchema(BaseModel):
     explanation: str
     actionable_suggestion: str
+    status: Optional[str] = None
 
 class SimulationStateSchema(BaseModel):
     scenario_id: str

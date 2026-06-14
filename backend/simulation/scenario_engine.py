@@ -130,18 +130,22 @@ async def run_simulation_loop(session_id: str, scenario_id: str, tick_rate_ms: i
                     latest_decision = existing_state["refuel_decision"]
 
                 # 5. AI Explanation (updated every 15 steps in background thread to prevent blocking)
+                latest_ai = None
+                if existing_state and existing_state.get("ai_insights"):
+                    latest_ai = existing_state["ai_insights"]
+
                 if step == 0 or step % 15 == 0 or latest_ai is None:
-                    if latest_ai is None or step == 0:
-                        latest_ai = {
-                            "explanation": "Cause: Generating report...\nEffect: Generating report...\nAction: Generating report...",
-                            "actionable_suggestion": "Generating recommendation...",
-                            "status": "loading"
-                        }
+                    latest_ai = {
+                        "explanation": "Cause: Generating report...\nEffect: Generating report...\nAction: Generating report...",
+                        "actionable_suggestion": "Generating recommendation...",
+                        "status": "loading"
+                    }
 
                     # Launch non-blocking background task
                     def fetch_ai_task(sid, step_num, analytics_snap, decision_snap, main_loop):
                         try:
                             ai_data = get_ai_insights(sid, analytics_snap, decision_snap)
+                            ai_data["status"] = "done"
                             
                             async def update_cache():
                                 async with get_lock(session_id):

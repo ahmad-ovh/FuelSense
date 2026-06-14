@@ -56,6 +56,7 @@ def test_scenario_state():
     assert "refuel_decision" in sim_state
     assert "fuel_price_context" in sim_state
     assert "ai_insights" in sim_state
+    assert "status" in sim_state["ai_insights"]
 
 def test_simulate_run():
     """Verify that simulate/run is compatible and launches the simulation."""
