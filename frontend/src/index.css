@@ -1098,7 +1098,7 @@ body {
   100% { opacity: .2; }
 }
 
-.fab-trigger-spinning svg {
+.fab-trigger-spinning i {
   animation: spin 2s linear infinite;
 }
 
@@ -1152,7 +1152,7 @@ body {
   font-weight: 600;
 }
 
-.bottom-nav-item svg {
+.bottom-nav-item i {
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), color 0.3s;
 }
 
@@ -1164,7 +1164,7 @@ body {
   color: #3b82f6;
 }
 
-.bottom-nav-item.active svg {
+.bottom-nav-item.active i {
   transform: translateY(-2px) scale(1.1);
   color: #3b82f6;
 }
