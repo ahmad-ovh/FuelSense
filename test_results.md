@@ -36,7 +36,7 @@ backend/tests/test_e2e.py::test_ai_chat PASSED                           [ 75%]
 backend/tests/test_e2e.py::test_decision_engine_rules PASSED             [ 87%]
 backend/tests/test_e2e.py::test_analytics_formulas PASSED                [100%]
 
-======================== 8 passed, 2 warnings in 2.96s ========================
+======================= 8 passed, 2 warnings in 24.73s ========================
 ```
 
 ---
