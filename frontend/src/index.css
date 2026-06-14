@@ -59,16 +59,17 @@ body {
 .app-container {
   width: 100%;
   max-width: 430px;
-  min-height: 100vh;
+  height: 820px;
+  max-height: calc(100vh - 80px);
   background: linear-gradient(180deg, #0b1329 0%, #080e1e 100%);
   box-shadow: 0 10px 50px rgba(0, 0, 0, 0.5);
   display: flex;
   flex-direction: column;
   position: relative;
   box-sizing: border-box;
-  padding-bottom: 80px; /* space for FAB */
-  border-left: 1px solid #1e293b;
-  border-right: 1px solid #1e293b;
+  border: 1px solid #1e293b;
+  border-radius: 24px;
+  overflow: hidden;
   flex-shrink: 0;
 }
 
@@ -219,16 +220,18 @@ body {
   .demo-control-sidebar {
     display: none;
   }
+
+  .app-container {
+    height: 100vh;
+    max-height: 100vh;
+    border-radius: 0;
+    border: none;
+  }
 }
 
 @media (min-width: 851px) {
   .fab-container {
     display: none;
-  }
-  
-  /* Remove bottom padding from mobile container when FAB is hidden */
-  .app-container {
-    padding-bottom: 24px;
   }
 }
 
@@ -303,6 +306,8 @@ body {
   flex-direction: column;
   gap: 16px;
   box-sizing: border-box;
+  flex: 1;
+  overflow-y: auto;
 }
 
 .section-title {
@@ -845,7 +850,7 @@ body {
 /* Floating Action Button (FAB) styles */
 .fab-container {
   position: fixed;
-  bottom: 20px;
+  bottom: 80px;
   right: calc(50% - 215px + 20px); /* Center relative to mobile wrapper */
   z-index: 200;
 }
@@ -1112,4 +1117,54 @@ body {
 .insight-skeleton {
   border-color: #334155 !important;
   background-color: rgba(30, 41, 59, 0.1) !important;
+}
+
+/* Bottom Navigation Bar */
+.bottom-nav {
+  height: 64px;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 0 8px;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  z-index: 100;
+}
+
+.bottom-nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: 6px 0;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.bottom-nav-item svg {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), color 0.3s;
+}
+
+.bottom-nav-item:hover {
+  color: #94a3b8;
+}
+
+.bottom-nav-item.active {
+  color: #3b82f6;
+}
+
+.bottom-nav-item.active svg {
+  transform: translateY(-2px) scale(1.1);
+  color: #3b82f6;
 }

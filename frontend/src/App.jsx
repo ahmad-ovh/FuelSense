@@ -15,6 +15,7 @@ function App() {
   const [currentStatus, setCurrentStatus] = useState('IDLE');
   const [error, setError] = useState(null);
   const [isRefuelLoading, setIsRefuelLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState('refuel'); // 'refuel', 'drive', 'insights', 'chat'
 
   // Trigger refuel analysis manually (on-demand) and stream results
   const handleAnalyzeRefuel = async () => {
@@ -222,58 +223,100 @@ function App() {
 
         {/* Dashboard Content */}
         <main className="dashboard-content">
-          {/* Level 1: Decision Card */}
-          <RefuelDecisionCard
-            refuel={refuel}
-            priceContext={priceContext}
-            fuelLevel={telemetry.fuel_level_pct || 100}
-            onAnalyze={handleAnalyzeRefuel}
-            isLoading={isRefuelLoading}
-          />
-
-          {/* Level 2: Eco Score Gauge */}
-          <EcoScoreGauge score={analytics.eco_score || 100} />
-
-          {/* Level 2 & 4: Metric Grid */}
-          <div className="metrics-grid">
-            <MetricCard
-              label="Fuel Efficiency"
-              value={analytics.fuel_efficiency?.toFixed(1) || '0.0'}
-              unit="L/100km"
-              subLabel="Standardized fuel consumption"
+          {activeTab === 'refuel' && (
+            <RefuelDecisionCard
+              refuel={refuel}
+              priceContext={priceContext}
+              fuelLevel={telemetry.fuel_level_pct || 100}
+              onAnalyze={handleAnalyzeRefuel}
+              isLoading={isRefuelLoading}
             />
-            <MetricCard
-              label="Cost Index"
-              value={analytics.cost_per_km ? `RM${analytics.cost_per_km.toFixed(3)}` : 'RM0.000'}
-              unit="/ km"
-              subLabel="Projected cost per kilometer"
-            />
-            <MetricCard
-              label="Projected Spend"
-              value={analytics.monthly_spend_myr ? `RM${analytics.monthly_spend_myr.toFixed(2)}` : 'RM0.00'}
-              unit="/ mo"
-              subLabel="Estimated monthly spend (1.2k km)"
-            />
-            <MetricCard
-              label="Carbon Footprint"
-              value={analytics.co2_kg?.toFixed(1) || '0.0'}
-              unit="kg CO₂"
-              subLabel="Projected monthly CO₂ footprint"
-            />
-          </div>
+          )}
 
-          {/* Level 3: Behavior Breakdown */}
-          <BehaviorBreakdownBar
-            idlePct={analytics.idle_pct || 0}
-            drivingMode={telemetry.driving_mode || 'city'}
-          />
+          {activeTab === 'drive' && (
+            <>
+              <EcoScoreGauge score={analytics.eco_score || 100} />
+              <div className="metrics-grid">
+                <MetricCard
+                  label="Fuel Efficiency"
+                  value={analytics.fuel_efficiency?.toFixed(1) || '0.0'}
+                  unit="L/100km"
+                  subLabel="Standardized fuel consumption"
+                />
+                <MetricCard
+                  label="Cost Index"
+                  value={analytics.cost_per_km ? `RM${analytics.cost_per_km.toFixed(3)}` : 'RM0.000'}
+                  unit="/ km"
+                  subLabel="Projected cost per kilometer"
+                />
+                <MetricCard
+                  label="Projected Spend"
+                  value={analytics.monthly_spend_myr ? `RM${analytics.monthly_spend_myr.toFixed(2)}` : 'RM0.00'}
+                  unit="/ mo"
+                  subLabel="Estimated monthly spend (1.2k km)"
+                />
+                <MetricCard
+                  label="Carbon Footprint"
+                  value={analytics.co2_kg?.toFixed(1) || '0.0'}
+                  unit="kg CO₂"
+                  subLabel="Projected monthly CO₂ footprint"
+                />
+              </div>
+              <BehaviorBreakdownBar
+                idlePct={analytics.idle_pct || 0}
+                drivingMode={telemetry.driving_mode || 'city'}
+              />
+            </>
+          )}
 
-          {/* Level 5: AI Insights */}
-          <AIInsightPanel aiInsights={aiInsights} scenarioId={activeScenarioId} apiBaseUrl={API_BASE_URL} />
+          {activeTab === 'insights' && (
+            <AIInsightPanel aiInsights={aiInsights} scenarioId={activeScenarioId} apiBaseUrl={API_BASE_URL} />
+          )}
 
-          {/* Level 5: AI Chat */}
-          <AIChat apiBaseUrl={API_BASE_URL} />
+          {activeTab === 'chat' && (
+            <AIChat apiBaseUrl={API_BASE_URL} />
+          )}
         </main>
+
+        {/* Bottom Navigation Bar */}
+        <nav className="bottom-nav">
+          <button 
+            className={`bottom-nav-item ${activeTab === 'refuel' ? 'active' : ''}`}
+            onClick={() => setActiveTab('refuel')}
+          >
+            <svg viewBox="0 0 24 24" width="20" height="20">
+              <path d="M19 5h-1V3H6v2H5c-1.1 0-2 .9-2 2v10h1v4h12v-4h1v-7c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm-3 12H8v-2h8v2zm0-4H8V7h8v6z" fill="currentColor"/>
+            </svg>
+            <span>Refuel</span>
+          </button>
+          <button 
+            className={`bottom-nav-item ${activeTab === 'drive' ? 'active' : ''}`}
+            onClick={() => setActiveTab('drive')}
+          >
+            <svg viewBox="0 0 24 24" width="20" height="20">
+              <path d="M12 4C6.5 4 2 8.5 2 14c0 4.7 3.3 8.6 7.8 9.7.5.1 1-.3 1-.8v-.5c0-.4-.3-.8-.7-.9C6.4 20.6 4 17.6 4 14c0-4.4 3.6-8 8-8s8 3.6 8 8c0 3.6-2.4 6.6-6.1 7.5-.4.1-.7.5-.7.9v.5c0 .5.5.9 1 .8 4.5-1.1 7.8-5 7.8-9.7 0-5.5-4.5-10-10-10z M12.5 8h-1v5.2l4.5 2.7.5-.8-4-2.4V8z" fill="currentColor"/>
+            </svg>
+            <span>Eco Drive</span>
+          </button>
+          <button 
+            className={`bottom-nav-item ${activeTab === 'insights' ? 'active' : ''}`}
+            onClick={() => setActiveTab('insights')}
+          >
+            <svg viewBox="0 0 24 24" width="20" height="20">
+              <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z" fill="currentColor"/>
+            </svg>
+            <span>AI Report</span>
+          </button>
+          <button 
+            className={`bottom-nav-item ${activeTab === 'chat' ? 'active' : ''}`}
+            onClick={() => setActiveTab('chat')}
+          >
+            <svg viewBox="0 0 24 24" width="20" height="20">
+              <path d="M11.5 9.5L9 4L6.5 9.5L1 12L6.5 14.5L9 20L11.5 14.5L17 12L11.5 9.5Z M20 8.5L19 6L18 8.5L15.5 9.5L18 10.5L19 13L20 10.5L22.5 9.5L20 8.5Z" fill="currentColor"/>
+            </svg>
+            <span>Copilot</span>
+          </button>
+        </nav>
 
         {/* Level 6: Floating Action Button selector (Only displayed on mobile sizes) */}
         <ScenarioFAB
