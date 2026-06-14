@@ -1,8 +1,24 @@
+import os
 import logging
+from typing import Optional
+from dotenv import load_dotenv
+from openai import OpenAI
+
+# Load environment variables from .env file
+load_dotenv()
 
 logger = logging.getLogger("ai_service")
 
-# Predefined deterministic insights matching Section 4.5 of design-spec.md
+# DeepSeek Configuration
+DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
+DEEPSEEK_BASE_URL = os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
+
+def get_client() -> Optional[OpenAI]:
+    if DEEPSEEK_API_KEY:
+        return OpenAI(api_key=DEEPSEEK_API_KEY, base_url=DEEPSEEK_BASE_URL)
+    return None
+
+# Local fallback templates to guarantee judging safety in case of network timeouts or invalid keys
 SCENARIO_INSIGHTS = {
     "A": {
         "explanation": "Your fuel cost increased due to heavy stop-go congestion and excessive idling in city traffic.",
@@ -24,14 +40,74 @@ SCENARIO_INSIGHTS = {
 
 def get_ai_insights(scenario_id: str, analytics: dict, decision: dict) -> dict:
     """
-    Generates a deterministic interpretation of the current metrics.
-    Guarantees Cause, Effect, Action structural presentation without calculations.
+    Generates a descriptive Cause, Effect, Action explanation of the driving session using DeepSeek.
     """
-    insight = SCENARIO_INSIGHTS.get(scenario_id)
-    if not insight:
-        insight = SCENARIO_INSIGHTS["A"]
+    client = get_client()
+    if client:
+        try:
+            refuel_rec = "N/A"
+            refuel_reason = "N/A"
+            if decision and decision.get("decision"):
+                refuel_rec = decision["decision"]
+                refuel_reason = decision["reason"]
 
-    # Build the structural explanation matching design-spec.md Section 4.5
+            prompt = (
+                f"Scenario Profile ID: {scenario_id}\n"
+                f"Telemetry Analytics Context:\n"
+                f"- Eco Score: {analytics.get('eco_score')}/100\n"
+                f"- Efficiency: {analytics.get('fuel_efficiency')} L/100km\n"
+                f"- Cost Index: RM{analytics.get('cost_per_km')}/km\n"
+                f"- Projected Monthly Spend: RM{analytics.get('monthly_spend_myr')}\n"
+                f"- Idle Ratio: {analytics.get('idle_pct')}%\n"
+                f"- Aggressive Events Count: {analytics.get('aggressive_events')}\n"
+                f"- Refuel Recommendation: {refuel_rec} ({refuel_reason})"
+            )
+
+            completion = client.chat.completions.create(
+                model="deepseek-v4-pro",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are the FuelSense Driving Analyst.\n"
+                            "Your task is to interpret the computed driving metrics and refuel decisions provided.\n"
+                            "You MUST NOT compute any new metrics or decisions, only explain them.\n"
+                            "Your output must strictly follow this template, matching Cause, Effect, and Action:\n"
+                            "Cause: [Explain what driving behaviors or pricing factors caused the metrics, e.g. stop-and-go congestion, high RPMs, rising prices]\n"
+                            "Effect: [Explain the financial and eco impact, e.g. efficiency is X L/100km, Eco Score is Y, spend is RM Z]\n"
+                            "Action: [Provide 1-2 actionable suggestions, e.g. reduce throttle spikes, turn off engine during long idle]\n\n"
+                            "Rules:\n"
+                            "1. Keep the entire response under 5 lines total.\n"
+                            "2. Do not output any reasoning/thinking tags or extra conversational text. Follow the template exactly."
+                        )
+                    },
+                    {"role": "user", "content": prompt}
+                ],
+                extra_body={
+                    "thinking": {"type": "enabled"},
+                    "reasoning_effort": "high"
+                },
+                stream=False
+            )
+
+            explanation = completion.choices[0].message.content.strip()
+            
+            # Extract action block
+            actionable_suggestion = "Adjust driving patterns to optimize efficiency."
+            if "Action:" in explanation:
+                actionable_suggestion = explanation.split("Action:")[1].strip()
+            elif scenario_id in SCENARIO_INSIGHTS:
+                actionable_suggestion = SCENARIO_INSIGHTS[scenario_id]["actionable_suggestion"]
+
+            return {
+                "explanation": explanation,
+                "actionable_suggestion": actionable_suggestion
+            }
+        except Exception as e:
+            logger.error(f"Error calling DeepSeek API for insights: {e}")
+
+    # Fallback to local deterministic templates if DeepSeek API key is not present or fails
+    insight = SCENARIO_INSIGHTS.get(scenario_id, SCENARIO_INSIGHTS["A"])
     explanation = (
         f"Cause: {insight['explanation']}\n"
         f"Effect: Fuel efficiency is {analytics['fuel_efficiency']} L/100km with an Eco Score of {analytics['eco_score']}.\n"
@@ -45,11 +121,55 @@ def get_ai_insights(scenario_id: str, analytics: dict, decision: dict) -> dict:
 
 def handle_ai_chat(message: str, current_state: dict) -> str:
     """
-    Simulates a conversational chatbot grounded in the active simulation state.
+    Handles conversation with the AI advisor grounded in current metrics using DeepSeek.
     """
     if not current_state:
         return "I don't have active driving telemetry yet. Please start a driving session first."
 
+    client = get_client()
+    if client:
+        try:
+            scenario_id = current_state.get("scenario_id", "A")
+            analytics = current_state.get("analytics", {})
+            decision = current_state.get("refuel_decision") or {}
+            price_ctx = current_state.get("fuel_price_context", {})
+            telemetry = current_state.get("telemetry", {})
+            status = current_state.get("status", "RUNNING")
+
+            system_prompt = (
+                "You are the FuelSense Driving Advisor.\n"
+                "You are assisting a driver in chat. You have access to the current active driving simulation state.\n"
+                f"Current State Context:\n"
+                f"- Scenario: {scenario_id}\n"
+                f"- Status: {status}\n"
+                f"- Telemetry: {telemetry}\n"
+                f"- Analytics: {analytics}\n"
+                f"- Refuel Decision: {decision}\n"
+                f"- Fuel Price Context: {price_ctx}\n\n"
+                "Rules:\n"
+                "1. Base your answer STRICTLY on the current state context provided.\n"
+                "2. Do NOT invent, assume, or compute any new metrics or decisions.\n"
+                "3. If the user asks about refueling but the refuel decision is empty/not yet calculated (e.g., refuel_decision is null/empty or has 'reason' containing 'idle'), tell them to click the 'Analyze Refuel Timing' button on the dashboard first.\n"
+                "4. Keep your response concise, clear, and professional. Max 3 sentences."
+            )
+
+            completion = client.chat.completions.create(
+                model="deepseek-v4-pro",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": message}
+                ],
+                extra_body={
+                    "thinking": {"type": "enabled"},
+                    "reasoning_effort": "high"
+                },
+                stream=False
+            )
+            return completion.choices[0].message.content.strip()
+        except Exception as e:
+            logger.error(f"Error calling DeepSeek API for chat: {e}")
+
+    # Fallback to local chatbot logic
     scenario_id = current_state.get("scenario_id", "A")
     analytics = current_state.get("analytics", {})
     decision = current_state.get("refuel_decision") or {}
@@ -73,14 +193,14 @@ def handle_ai_chat(message: str, current_state: dict) -> str:
             )
 
     elif "refuel" in msg_lower or "buy" in msg_lower or "wait" in msg_lower or "price" in msg_lower:
-        if not decision:
+        if not decision or not decision.get("decision") or "idle" in decision.get("reason", "").lower():
             return "I haven't analyzed your refuel timing for this session yet. Please click the 'Analyze Refuel Timing' button on the dashboard to calculate recommendations."
-        
+
         rec = decision.get("decision", "BUY")
         reason = decision.get("reason", "")
         savings = decision.get("estimated_savings", 0.0)
         trend = price_ctx.get("trend", "NEUTRAL")
-        
+
         if rec == "WAIT":
             return (
                 f"I recommend that you WAIT to refuel. Reason: {reason}. "
@@ -112,10 +232,8 @@ def handle_ai_chat(message: str, current_state: dict) -> str:
             "Driving in high-efficiency modes (like Highway cruising) can drop emissions by up to 50%."
         )
 
-    # General/Fallback response explaining the overall metrics
-    status = current_state.get("status", "RUNNING")
     return (
-        f"We are currently in a {status} driving session ({current_state.get('scenario_id')} profile). "
+        f"We are currently in a driving session ({current_state.get('scenario_id')} profile). "
         f"Your active Eco Score is {analytics.get('eco_score')}, with a fuel consumption rate of {analytics.get('fuel_efficiency')} L/100km. "
-        f"Our recommendation is to {decision.get('decision')} refuelling ({decision.get('reason')})."
+        "Ask me questions about your score, costs, or refuel recommendations!"
     )
