@@ -303,7 +303,7 @@ function App() {
             className={`bottom-nav-item ${activeTab === 'chat' ? 'active' : ''}`}
             onClick={() => setActiveTab('chat')}
           >
-            <i className="ph ph-sparkles" style={{ fontSize: '20px' }}></i>
+            <i className="ph ph-sparkle" style={{ fontSize: '20px' }}></i>
             <span>Copilot</span>
           </button>
         </nav>
