@@ -1,7 +1,32 @@
 import React from 'react';
 
 const AIInsightPanel = ({ aiInsights = {} }) => {
-  const { explanation = '' } = aiInsights;
+  const { explanation = '', status = '' } = aiInsights;
+
+  if (status === 'loading' || !explanation || explanation.includes('Generating report...')) {
+    return (
+      <div className="ai-insight-panel">
+        <h3 className="section-title">AI Advisor Insights</h3>
+        <div className="insight-grid">
+          <div className="insight-item insight-skeleton">
+            <div className="shimmer" style={{ width: '30%', height: '10px', borderRadius: '4px', marginBottom: '8px' }} />
+            <div className="shimmer" style={{ width: '90%', height: '8px', borderRadius: '4px', marginBottom: '6px' }} />
+            <div className="shimmer" style={{ width: '75%', height: '8px', borderRadius: '4px' }} />
+          </div>
+          <div className="insight-item insight-skeleton">
+            <div className="shimmer" style={{ width: '30%', height: '10px', borderRadius: '4px', marginBottom: '8px' }} />
+            <div className="shimmer" style={{ width: '85%', height: '8px', borderRadius: '4px', marginBottom: '6px' }} />
+            <div className="shimmer" style={{ width: '60%', height: '8px', borderRadius: '4px' }} />
+          </div>
+          <div className="insight-item insight-skeleton">
+            <div className="shimmer" style={{ width: '30%', height: '10px', borderRadius: '4px', marginBottom: '8px' }} />
+            <div className="shimmer" style={{ width: '80%', height: '8px', borderRadius: '4px', marginBottom: '6px' }} />
+            <div className="shimmer" style={{ width: '70%', height: '8px', borderRadius: '4px' }} />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Helper to parse Cause, Effect, and Action from the explanation text
   const parseInsights = (text) => {

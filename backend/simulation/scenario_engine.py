@@ -129,9 +129,33 @@ async def run_simulation_loop(session_id: str, scenario_id: str, tick_rate_ms: i
                 if existing_state and existing_state.get("refuel_decision"):
                     latest_decision = existing_state["refuel_decision"]
 
-                # 5. AI Explanation (updated every 15 steps)
+                # 5. AI Explanation (updated every 15 steps in background thread to prevent blocking)
                 if step == 0 or step % 15 == 0 or latest_ai is None:
-                    latest_ai = get_ai_insights(scenario_id, latest_analytics, latest_decision)
+                    if latest_ai is None or step == 0:
+                        latest_ai = {
+                            "explanation": "Cause: Generating report...\nEffect: Generating report...\nAction: Generating report...",
+                            "actionable_suggestion": "Generating recommendation...",
+                            "status": "loading"
+                        }
+
+                    # Launch non-blocking background task
+                    def fetch_ai_task(sid, step_num, analytics_snap, decision_snap, main_loop):
+                        try:
+                            ai_data = get_ai_insights(sid, analytics_snap, decision_snap)
+                            
+                            async def update_cache():
+                                async with get_lock(session_id):
+                                    state = get_latest_state(session_id)
+                                    if state and state["scenario_id"] == sid and state["current_step"] >= step_num:
+                                        state["ai_insights"] = ai_data
+                                        publish_state(session_id, state, state["current_step"])
+                            
+                            asyncio.run_coroutine_threadsafe(update_cache(), main_loop)
+                        except Exception as ex:
+                            logger.error(f"Error in background AI thread: {ex}")
+
+                    loop = asyncio.get_running_loop()
+                    loop.run_in_executor(None, fetch_ai_task, scenario_id, step, latest_analytics, latest_decision, loop)
 
                 # 6. Finalize SimulationState Schema
                 simulation_state = {

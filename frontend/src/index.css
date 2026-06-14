@@ -921,3 +921,20 @@ body {
 .fab-trigger-spinning svg {
   animation: spin 2s linear infinite;
 }
+
+/* Shimmer Skeleton Effects */
+.shimmer {
+  background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+  background-size: 200% 100%;
+  animation: shimmer-swipe 1.5s infinite linear;
+}
+
+@keyframes shimmer-swipe {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.insight-skeleton {
+  border-color: #334155 !important;
+  background-color: rgba(30, 41, 59, 0.1) !important;
+}
