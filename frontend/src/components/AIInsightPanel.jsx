@@ -25,6 +25,7 @@ const AIInsightPanel = ({ aiInsights = {}, scenarioId, apiBaseUrl }) => {
     if (activeStreamRef.current) return;
     setIsStreaming(true);
     setStreamedText('');
+    setFinalText('');
     activeStreamRef.current = true;
 
     try {
@@ -107,7 +108,28 @@ const AIInsightPanel = ({ aiInsights = {}, scenarioId, apiBaseUrl }) => {
 
   return (
     <div className="ai-insight-panel">
-      <h3 className="section-title">AI Driving Performance Report</h3>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+        <h3 className="section-title" style={{ margin: 0 }}>AI Driving Performance Report</h3>
+        <button 
+          onClick={startStreamingInsights} 
+          disabled={isLoadingState}
+          style={{ 
+            background: 'rgba(255, 255, 255, 0.08)', 
+            border: 'none', 
+            color: '#cbd5e1', 
+            fontSize: '9px', 
+            padding: '3px 8px', 
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontWeight: 'bold',
+            transition: 'background 0.2s'
+          }}
+          onMouseOver={(e) => e.target.style.background = 'rgba(255, 255, 255, 0.15)'}
+          onMouseOut={(e) => e.target.style.background = 'rgba(255, 255, 255, 0.08)'}
+        >
+          {isLoadingState ? 'Regenerating...' : 'Regenerate Report'}
+        </button>
+      </div>
       <div className="insight-grid">
         {/* Cause Block */}
         {!cause && isLoadingState ? (

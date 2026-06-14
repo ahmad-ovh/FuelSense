@@ -129,12 +129,12 @@ async def run_simulation_loop(session_id: str, scenario_id: str, tick_rate_ms: i
                 if existing_state and existing_state.get("refuel_decision"):
                     latest_decision = existing_state["refuel_decision"]
 
-                # 5. AI Explanation (updated every 15 steps in background thread to prevent blocking)
+                # 5. AI Explanation (updated once on initialization/reset to prevent loop calls)
                 latest_ai = None
                 if existing_state and existing_state.get("ai_insights"):
                     latest_ai = existing_state["ai_insights"]
 
-                if step == 0 or step % 15 == 0 or latest_ai is None:
+                if latest_ai is None or latest_ai.get("status") is None:
                     latest_ai = {
                         "explanation": "Cause: Generating report...\nEffect: Generating report...\nAction: Generating report...",
                         "actionable_suggestion": "Generating recommendation...",
