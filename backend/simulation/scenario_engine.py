@@ -244,7 +244,7 @@ async def start_scenario_stream(session_id: str, scenario_id: str) -> dict:
             "timestamp": int(time.time()),
             "telemetry": {"speed_kmh": 0, "rpm": 0, "throttle_pct": 0, "engine_load_pct": 0, "fuel_level_pct": 100.0, "driving_mode": "city", "fuel_burn_rate_lph": 0.0},
             "analytics": {"eco_score": 100.0, "fuel_efficiency": 0.0, "cost_per_km": 0.0, "monthly_spend_myr": 0.0, "co2_kg": 0.0, "idle_pct": 0.0, "aggressive_events": 0, "distance_km": 0.0, "fuel_burned_liters": 0.0},
-            "refuel_decision": {"decision": "WAIT", "reason": "System resetting", "estimated_savings": 0.0},
+            "refuel_decision": None,
             "fuel_price_context": {"current_price": 0.0, "rolling_30day_avg": 0.0, "trend": "NEUTRAL"},
             "ai_insights": {"explanation": "Reinitializing simulation...", "actionable_suggestion": "Wait for telemetry stream."}
         }, 0)
