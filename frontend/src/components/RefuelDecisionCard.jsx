@@ -41,7 +41,11 @@ const RefuelDecisionCard = ({ refuel = null, priceContext = {}, fuelLevel = 100,
   let badgeText = 'Recommended';
   let badgeClass = 'badge-recommended';
 
-  if (decision === 'WAIT') {
+  if (decision === 'PENDING') {
+    cardClass = 'decision-neutral';
+    badgeText = 'Analyzing...';
+    badgeClass = 'badge-recommended';
+  } else if (decision === 'WAIT') {
     cardClass = 'decision-wait';
     badgeText = 'Hold / Wait';
     badgeClass = 'badge-neutral';
@@ -98,7 +102,11 @@ const RefuelDecisionCard = ({ refuel = null, priceContext = {}, fuelLevel = 100,
       </div>
 
       <div className="decision-value-wrapper">
-        <h1 className="decision-value">{decision}</h1>
+        {decision === 'PENDING' ? (
+          <div className="shimmer" style={{ height: '36px', width: '120px', borderRadius: '8px', marginBottom: '8px' }} />
+        ) : (
+          <h1 className="decision-value">{decision}</h1>
+        )}
         {estimated_savings > 0 && (
           <div className="savings-badge">
             <span className="savings-label">Projected Savings</span>

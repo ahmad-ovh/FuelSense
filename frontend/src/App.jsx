@@ -169,6 +169,13 @@ function App() {
     return () => clearInterval(interval);
   }, []);
 
+  // Auto-trigger refuel analysis when state loads and decision is missing
+  useEffect(() => {
+    if (simulationState && (!simulationState.refuel_decision || !simulationState.refuel_decision.decision) && !isRefuelLoading) {
+      handleAnalyzeRefuel();
+    }
+  }, [simulationState, isRefuelLoading]);
+
   const telemetry = simulationState?.telemetry || {};
   const analytics = simulationState?.analytics || {};
   const refuel = simulationState?.refuel_decision || {};
