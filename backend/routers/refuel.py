@@ -43,6 +43,7 @@ async def get_refuel_decision(user_id: str, db: Session = Depends(get_db)):
 
     # Calculate deterministic refuel decision immediately
     decision = evaluate_decision(fuel_level, tank_capacity, price_context)
+    decision["is_ai_justified"] = False
 
     # Atomically update the refuel decision inside the active SimulationState with the immediate result
     state["refuel_decision"] = decision
@@ -62,6 +63,7 @@ async def get_refuel_decision(user_id: str, db: Session = Depends(get_db)):
                     curr_state = get_latest_state(sid)
                     if curr_state and curr_state.get("refuel_decision"):
                         curr_state["refuel_decision"]["reason"] = ai_reason
+                        curr_state["refuel_decision"]["is_ai_justified"] = True
                         publish_state(sid, curr_state, curr_state["current_step"])
             
             asyncio.run_coroutine_threadsafe(update_reason(), main_loop)

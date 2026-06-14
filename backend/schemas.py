@@ -25,6 +25,7 @@ class RefuelDecisionSchema(BaseModel):
     decision: str
     reason: str
     estimated_savings: float
+    is_ai_justified: Optional[bool] = None
 
 class FuelPriceContextSchema(BaseModel):
     current_price: float

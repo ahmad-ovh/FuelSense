@@ -33,7 +33,7 @@ const RefuelDecisionCard = ({ refuel = null, priceContext = {}, fuelLevel = 100,
     );
   }
 
-  const { decision = 'BUY', reason = 'Standard evaluation', estimated_savings = 0.0 } = refuel;
+  const { decision = 'BUY', reason = 'Standard evaluation', estimated_savings = 0.0, is_ai_justified = false } = refuel;
   const { current_price = 2.05, rolling_30day_avg = 2.05, trend = 'NEUTRAL' } = priceContext;
 
   // Determine urgency levels
@@ -107,7 +107,14 @@ const RefuelDecisionCard = ({ refuel = null, priceContext = {}, fuelLevel = 100,
         )}
       </div>
 
-      <p className="decision-reason">{reason}</p>
+      {!is_ai_justified ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', margin: '12px 0 16px 0' }}>
+          <div className="shimmer" style={{ height: '12.5px', width: '100%', borderRadius: '4px' }} />
+          <div className="shimmer" style={{ height: '12.5px', width: '75%', borderRadius: '4px' }} />
+        </div>
+      ) : (
+        <p className="decision-reason">{reason}</p>
+      )}
 
       <div className="price-trend-section">
         <div className="price-stat">
