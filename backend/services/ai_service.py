@@ -119,6 +119,56 @@ def get_ai_insights(scenario_id: str, analytics: dict, decision: dict) -> dict:
         "actionable_suggestion": insight["actionable_suggestion"]
     }
 
+def get_refuel_ai_justification(scenario_id: str, fuel_level_pct: float, decision: dict, price_context: dict) -> str:
+    """
+    Calls DeepSeek to generate a short, professional justification for the refueling decision.
+    """
+    client = get_client()
+    if client:
+        try:
+            current_price = price_context.get("current_price")
+            avg_price = price_context.get("rolling_30day_avg")
+            trend = price_context.get("trend")
+            rec = decision.get("decision")
+            savings = decision.get("estimated_savings", 0.0)
+
+            prompt = (
+                f"Scenario ID: {scenario_id}\n"
+                f"Fuel Level: {fuel_level_pct:.1f}%\n"
+                f"Weekly Trend: {trend}\n"
+                f"Price: RM{current_price:.2f}/L (30d Avg: RM{avg_price:.2f}/L)\n"
+                f"Recommendation: {rec}\n"
+                f"Savings: RM{savings:.2f}\n"
+            )
+
+            completion = client.chat.completions.create(
+                model="deepseek-v4-pro",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are the FuelSense Refuel Advisor.\n"
+                            "Based on the refueling recommendation and market context, provide a short, professional justification.\n"
+                            "Explain shortly why this recommendation is correct based on the fuel level, price trend, and savings.\n"
+                            "Rules:\n"
+                            "1. Keep it under 2 sentences (strictly max 25 words).\n"
+                            "2. Do not output any thinking/reasoning tags or formatting. Output plain text only."
+                        )
+                    },
+                    {"role": "user", "content": prompt}
+                ],
+                extra_body={
+                    "thinking": {"type": "enabled"},
+                    "reasoning_effort": "high"
+                },
+                stream=False
+            )
+            return completion.choices[0].message.content.strip()
+        except Exception as e:
+            logger.error(f"Error calling DeepSeek API for refuel justification: {e}")
+    
+    return decision.get("reason", "")
+
 def handle_ai_chat(message: str, current_state: dict) -> str:
     """
     Handles conversation with the AI advisor grounded in current metrics using DeepSeek.

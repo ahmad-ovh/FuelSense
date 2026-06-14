@@ -1,16 +1,20 @@
+import asyncio
+import logging
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from ..database import get_db
 from ..models import TelemetryFrame
-from ..simulation.scenario_engine import get_latest_state, publish_state
+from ..simulation.scenario_engine import get_latest_state, publish_state, get_lock
 from ..services.decision_engine import evaluate_decision
 from ..services.fuel_price_service import get_price_context
 from ..simulation.scenario_definitions import SCENARIOS
 
+logger = logging.getLogger("refuel_router")
+
 router = APIRouter(prefix="/refuel", tags=["Refuel Decision"])
 
 @router.get("/{user_id}")
-def get_refuel_decision(user_id: str, db: Session = Depends(get_db)):
+async def get_refuel_decision(user_id: str, db: Session = Depends(get_db)):
     """
     Computes the refueling decision dynamically on request (click).
     Fulfills Section 12.3 of technical-spec.md and updates the SimulationState cache.
@@ -37,11 +41,34 @@ def get_refuel_decision(user_id: str, db: Session = Depends(get_db)):
     tank_capacity = scenario["vehicle"]["tank_capacity_l"]
     price_context = get_price_context(scenario_id)
 
-    # Calculate refuel decision
+    # Calculate deterministic refuel decision immediately
     decision = evaluate_decision(fuel_level, tank_capacity, price_context)
 
-    # Atomically update the refuel decision inside the active SimulationState
+    # Atomically update the refuel decision inside the active SimulationState with the immediate result
     state["refuel_decision"] = decision
     publish_state(session_id, state, state["current_step"])
+
+    # Launch non-blocking background task to get AI justification shortly
+    def fetch_refuel_ai_task(sid, sc_id, f_level, dec_copy, p_ctx, main_loop):
+        try:
+            from ..services.ai_service import get_refuel_ai_justification
+            
+            # 1. Fetch AI justification from DeepSeek
+            ai_reason = get_refuel_ai_justification(sc_id, f_level, dec_copy, p_ctx)
+            
+            # 2. Acquire lock and update state cache atomically
+            async def update_reason():
+                async with get_lock(sid):
+                    curr_state = get_latest_state(sid)
+                    if curr_state and curr_state.get("refuel_decision"):
+                        curr_state["refuel_decision"]["reason"] = ai_reason
+                        publish_state(sid, curr_state, curr_state["current_step"])
+            
+            asyncio.run_coroutine_threadsafe(update_reason(), main_loop)
+        except Exception as ex:
+            logger.error(f"Error in background refuel AI task: {ex}")
+
+    loop = asyncio.get_running_loop()
+    loop.run_in_executor(None, fetch_refuel_ai_task, session_id, scenario_id, fuel_level, decision.copy(), price_context, loop)
 
     return decision
