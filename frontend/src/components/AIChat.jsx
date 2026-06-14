@@ -39,12 +39,45 @@ const AIChat = ({ apiBaseUrl }) => {
         throw new Error('Chat API failed');
       }
 
-      const data = await response.json();
-      setMessages((prev) => [...prev, { sender: 'assistant', text: data.response }]);
+      // Add a placeholder message for the assistant that will show loading
+      setMessages((prev) => [...prev, { sender: 'assistant', text: '', isStreaming: true }]);
+      setLoading(false); // Enable input form early
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      let streamedResponse = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        streamedResponse += chunk;
+
+        // Update the last message in state with the streamed text
+        setMessages((prev) => {
+          const next = [...prev];
+          const lastMsg = next[next.length - 1];
+          if (lastMsg && lastMsg.sender === 'assistant' && lastMsg.isStreaming) {
+            lastMsg.text = streamedResponse;
+          }
+          return next;
+        });
+      }
+
+      // Mark streaming as completed
+      setMessages((prev) => {
+        const next = [...prev];
+        const lastMsg = next[next.length - 1];
+        if (lastMsg && lastMsg.sender === 'assistant') {
+          delete lastMsg.isStreaming;
+        }
+        return next;
+      });
+
     } catch (error) {
       console.error(error);
       setMessages((prev) => [...prev, { sender: 'assistant', text: 'Sorry, I am having trouble connecting to my engine right now. Please try again.' }]);
-    } finally {
       setLoading(false);
     }
   };
@@ -57,19 +90,16 @@ const AIChat = ({ apiBaseUrl }) => {
         {messages.map((msg, index) => (
           <div key={index} className={`chat-bubble-wrapper ${msg.sender === 'user' ? 'bubble-user' : 'bubble-assistant'}`}>
             <div className="chat-bubble">
-              {msg.text}
+              {msg.sender === 'assistant' && msg.isStreaming && !msg.text ? (
+                <div style={{ display: 'flex', gap: '3px', padding: '2px 0' }}>
+                  <span className="dot-blink" style={{ fontSize: '14px', lineHeight: '1' }}>•</span>
+                  <span className="dot-blink" style={{ fontSize: '14px', lineHeight: '1', animationDelay: '0.2s' }}>•</span>
+                  <span className="dot-blink" style={{ fontSize: '14px', lineHeight: '1', animationDelay: '0.4s' }}>•</span>
+                </div>
+              ) : msg.text}
             </div>
           </div>
         ))}
-        {loading && (
-          <div className="chat-bubble-wrapper bubble-assistant">
-            <div className="chat-bubble bubble-loading">
-              <span className="dot-blink">.</span>
-              <span className="dot-blink">.</span>
-              <span className="dot-blink">.</span>
-            </div>
-          </div>
-        )}
         <div ref={messagesEndRef} />
       </div>
 

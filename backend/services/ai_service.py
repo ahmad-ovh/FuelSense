@@ -1,5 +1,8 @@
 import os
 import logging
+import queue
+import threading
+import time
 from typing import Optional
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -287,3 +290,192 @@ def handle_ai_chat(message: str, current_state: dict) -> str:
         f"Your active Eco Score is {analytics.get('eco_score')}, with a fuel consumption rate of {analytics.get('fuel_efficiency')} L/100km. "
         "Ask me questions about your score, costs, or refuel recommendations!"
     )
+
+def stream_ai_chat_worker(q: queue.Queue, message: str, current_state: dict):
+    try:
+        if not current_state:
+            q.put("I don't have active driving telemetry yet. Please start a driving simulation session first.")
+            return
+
+        client = get_client()
+        if client:
+            try:
+                scenario_id = current_state.get("scenario_id", "A")
+                analytics = current_state.get("analytics", {})
+                decision = current_state.get("refuel_decision") or {}
+                price_ctx = current_state.get("fuel_price_context", {})
+                telemetry = current_state.get("telemetry", {})
+                status = current_state.get("status", "RUNNING")
+
+                system_prompt = (
+                    "You are the FuelSense Driving Advisor.\n"
+                    "You are assisting a driver in chat. You have access to the current active driving simulation state.\n"
+                    f"Current State Context:\n"
+                    f"- Scenario: {scenario_id}\n"
+                    f"- Status: {status}\n"
+                    f"- Telemetry: {telemetry}\n"
+                    f"- Analytics: {analytics}\n"
+                    f"- Refuel Decision: {decision}\n"
+                    f"- Fuel Price Context: {price_ctx}\n\n"
+                    "Rules:\n"
+                    "1. Base your answer STRICTLY on the current state context provided.\n"
+                    "2. Do NOT invent, assume, or compute any new metrics or decisions.\n"
+                    "3. If the user asks about refueling but the refuel decision is empty/not yet calculated (e.g., refuel_decision is null/empty or has 'reason' containing 'idle'), tell them to click the 'Analyze Refuel Timing' button on the dashboard first.\n"
+                    "4. Keep your response concise, clear, and professional. Max 3 sentences."
+                )
+
+                completion = client.chat.completions.create(
+                    model="deepseek-v4-pro",
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": message}
+                    ],
+                    extra_body={
+                        "thinking": {"type": "enabled"},
+                        "reasoning_effort": "high"
+                    },
+                    stream=True
+                )
+                for chunk in completion:
+                    content = chunk.choices[0].delta.content
+                    if content:
+                        q.put(content)
+                return
+            except Exception as e:
+                logger.error(f"Error streaming DeepSeek chat: {e}")
+
+        # Fallback chat logic (simulated streaming)
+        fallback_resp = handle_ai_chat(message, current_state)
+        for word in fallback_resp.split(" "):
+            q.put(word + " ")
+            time.sleep(0.05)
+    finally:
+        q.put(None)
+
+def stream_refuel_ai_justification_worker(q: queue.Queue, scenario_id: str, fuel_level_pct: float, decision: dict, price_context: dict):
+    try:
+        client = get_client()
+        if client:
+            try:
+                current_price = price_context.get("current_price")
+                avg_price = price_context.get("rolling_30day_avg")
+                trend = price_context.get("trend")
+                rec = decision.get("decision")
+                savings = decision.get("estimated_savings", 0.0)
+
+                prompt = (
+                    f"Scenario ID: {scenario_id}\n"
+                    f"Fuel Level: {fuel_level_pct:.1f}%\n"
+                    f"Weekly Trend: {trend}\n"
+                    f"Price: RM{current_price:.2f}/L (30d Avg: RM{avg_price:.2f}/L)\n"
+                    f"Recommendation: {rec}\n"
+                    f"Savings: RM{savings:.2f}\n"
+                )
+
+                completion = client.chat.completions.create(
+                    model="deepseek-v4-pro",
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": (
+                                "You are the FuelSense Refuel Advisor.\n"
+                                "Based on the refueling recommendation and market context, provide a short, professional justification.\n"
+                                "Explain shortly why this recommendation is correct based on the fuel level, price trend, and savings.\n"
+                                "Rules:\n"
+                                "1. Keep it under 2 sentences (strictly max 25 words).\n"
+                                "2. Do not output any thinking/reasoning tags or formatting. Output plain text only."
+                            )
+                        },
+                        {"role": "user", "content": prompt}
+                    ],
+                    extra_body={
+                        "thinking": {"type": "enabled"},
+                        "reasoning_effort": "high"
+                    },
+                    stream=True
+                )
+                for chunk in completion:
+                    content = chunk.choices[0].delta.content
+                    if content:
+                        q.put(content)
+                return
+            except Exception as e:
+                logger.error(f"Error streaming DeepSeek refuel: {e}")
+
+        # Fallback justification (simulated streaming)
+        fallback_reason = decision.get("reason", "Lock in current rates or maintain reserve levels.")
+        for word in fallback_reason.split(" "):
+            q.put(word + " ")
+            time.sleep(0.05)
+    finally:
+        q.put(None)
+
+def stream_ai_insights_worker(q: queue.Queue, scenario_id: str, analytics: dict, decision: dict):
+    try:
+        client = get_client()
+        if client:
+            try:
+                refuel_rec = "N/A"
+                refuel_reason = "N/A"
+                if decision and decision.get("decision"):
+                    refuel_rec = decision["decision"]
+                    refuel_reason = decision["reason"]
+
+                prompt = (
+                    f"Scenario Profile ID: {scenario_id}\n"
+                    f"Telemetry Analytics Context:\n"
+                    f"- Eco Score: {analytics.get('eco_score')}/100\n"
+                    f"- Efficiency: {analytics.get('fuel_efficiency')} L/100km\n"
+                    f"- Cost Index: RM{analytics.get('cost_per_km')}/km\n"
+                    f"- Projected Monthly Spend: RM{analytics.get('monthly_spend_myr')}\n"
+                    f"- Idle Ratio: {analytics.get('idle_pct')}%\n"
+                    f"- Aggressive Events Count: {analytics.get('aggressive_events')}\n"
+                    f"- Refuel Recommendation: {refuel_rec} ({refuel_reason})"
+                )
+
+                completion = client.chat.completions.create(
+                    model="deepseek-v4-pro",
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": (
+                                "You are the FuelSense Driving Analyst.\n"
+                                "Your task is to interpret the computed driving metrics and refuel decisions provided.\n"
+                                "You MUST NOT compute any new metrics or decisions, only explain them.\n"
+                                "Your output must strictly follow this template, matching Cause, Effect, and Action:\n"
+                                "Cause: [Explain what driving behaviors or pricing factors caused the metrics, e.g. stop-and-go congestion, high RPMs, rising prices]\n"
+                                "Effect: [Explain the financial and eco impact, e.g. efficiency is X L/100km, Eco Score is Y, spend is RM Z]\n"
+                                "Action: [Provide 1-2 actionable suggestions, e.g. reduce throttle spikes, turn off engine during long idle]\n\n"
+                                "Rules:\n"
+                                "1. Keep the entire response under 5 lines total.\n"
+                                "2. Do not output any reasoning/thinking tags or extra conversational text. Follow the template exactly."
+                            )
+                        },
+                        {"role": "user", "content": prompt}
+                    ],
+                    extra_body={
+                        "thinking": {"type": "enabled"},
+                        "reasoning_effort": "high"
+                    },
+                    stream=True
+                )
+                for chunk in completion:
+                    content = chunk.choices[0].delta.content
+                    if content:
+                        q.put(content)
+                return
+            except Exception as e:
+                logger.error(f"Error streaming DeepSeek insights: {e}")
+
+        # Fallback insights (simulated streaming)
+        insight = SCENARIO_INSIGHTS.get(scenario_id, SCENARIO_INSIGHTS["A"])
+        explanation = (
+            f"Cause: {insight['explanation']}\n"
+            f"Effect: Fuel efficiency is {analytics['fuel_efficiency']} L/100km with an Eco Score of {analytics['eco_score']}.\n"
+            f"Action: {insight['actionable_suggestion']}"
+        )
+        for word in explanation.split(" "):
+            q.put(word + " ")
+            time.sleep(0.05)
+    finally:
+        q.put(None)

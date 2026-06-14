@@ -1,6 +1,11 @@
 import time
+import queue
+import threading
+import json
+import asyncio
 from typing import List, Optional
 from fastapi import APIRouter, HTTPException, Depends
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from ..schemas import ScenarioStateResponse, ScenarioStatusResponse
@@ -11,7 +16,9 @@ from ..simulation.scenario_engine import (
     reset_scenario_engine,
     get_latest_state,
     state_cache,
-    compute_hash
+    compute_hash,
+    get_lock,
+    publish_state
 )
 
 router = APIRouter(prefix="/scenario", tags=["Scenario Control"])
@@ -154,3 +161,66 @@ def get_scenario_current():
     session_id = "active"
     state = get_latest_state(session_id)
     return {"active_scenario": state["scenario_id"] if state else None}
+
+@router.get("/insights/stream")
+async def stream_scenario_insights(scenario_id: str):
+    """
+    Streams the Cause, Effect, Action driving insights from DeepSeek.
+    Updates the SimulationState cache on completion.
+    """
+    session_id = "active"
+    state = get_latest_state(session_id)
+    if not state:
+        raise HTTPException(status_code=400, detail="No active simulation session found.")
+
+    analytics = state.get("analytics") or {}
+    decision = state.get("refuel_decision") or {}
+
+    async def event_generator():
+        from ..services.ai_service import stream_ai_insights_worker
+        
+        q = queue.Queue()
+        threading.Thread(
+            target=stream_ai_insights_worker,
+            args=(q, scenario_id, analytics, decision),
+            daemon=True
+        ).start()
+
+        accumulated_insights = ""
+        while True:
+            try:
+                item = q.get_nowait()
+                if item is None:
+                    break
+                accumulated_insights += item
+                yield json.dumps({"type": "chunk", "content": item}) + "\n"
+            except queue.Empty:
+                await asyncio.sleep(0.02)
+            except Exception as e:
+                import logging
+                logger = logging.getLogger("scenarios_router")
+                logger.error(f"Error yielding insights chunk: {e}")
+                break
+
+        # Extract actionable suggestion
+        from ..services.ai_service import SCENARIO_INSIGHTS
+        actionable_suggestion = "Adjust driving patterns to optimize efficiency."
+        if "Action:" in accumulated_insights:
+            actionable_suggestion = accumulated_insights.split("Action:")[1].strip()
+        elif scenario_id in SCENARIO_INSIGHTS:
+            actionable_suggestion = SCENARIO_INSIGHTS[scenario_id]["actionable_suggestion"]
+
+        ai_data = {
+            "explanation": accumulated_insights,
+            "actionable_suggestion": actionable_suggestion,
+            "status": "done"
+        }
+
+        # Update cache atomically
+        async with get_lock(session_id):
+            curr_state = get_latest_state(session_id)
+            if curr_state and curr_state.get("scenario_id") == scenario_id:
+                curr_state["ai_insights"] = ai_data
+                publish_state(session_id, curr_state, curr_state["current_step"])
+
+    return StreamingResponse(event_generator(), media_type="text/plain")

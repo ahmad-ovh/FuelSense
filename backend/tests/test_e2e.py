@@ -66,12 +66,11 @@ def test_simulate_run():
     assert data["status"] == "running"
 
 def test_ai_chat():
-    """Verify chatbot response."""
+    """Verify chatbot response streaming."""
     response = client.post("/ai/chat", json={"user_id": 1, "message": "Why is my eco score low?"})
     assert response.status_code == 200
-    data = response.json()
-    assert "response" in data
-    assert isinstance(data["response"], str)
+    text = response.text
+    assert len(text) > 0
 
 def test_decision_engine_rules():
     """

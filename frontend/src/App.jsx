@@ -16,7 +16,7 @@ function App() {
   const [error, setError] = useState(null);
   const [isRefuelLoading, setIsRefuelLoading] = useState(false);
 
-  // Trigger refuel analysis manually (on-demand)
+  // Trigger refuel analysis manually (on-demand) and stream results
   const handleAnalyzeRefuel = async () => {
     setIsRefuelLoading(true);
     try {
@@ -24,7 +24,74 @@ function App() {
       if (!response.ok) {
         throw new Error('Failed to run refuel analysis');
       }
-      // Re-poll state to update UI
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      let buffer = '';
+      let accumulatedReason = '';
+
+      // Initialize loading state in UI
+      setSimulationState((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          refuel_decision: {
+            decision: 'PENDING',
+            reason: '',
+            estimated_savings: 0.0,
+            is_ai_justified: false,
+          }
+        };
+      });
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        
+        // Save the incomplete last line back to buffer
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          try {
+            const data = JSON.parse(line);
+            if (data.type === 'metadata') {
+              setSimulationState((prev) => {
+                if (!prev) return prev;
+                return {
+                  ...prev,
+                  refuel_decision: {
+                    ...prev.refuel_decision,
+                    decision: data.decision,
+                    estimated_savings: data.estimated_savings,
+                    is_ai_justified: false,
+                  }
+                };
+              });
+            } else if (data.type === 'chunk') {
+              accumulatedReason += data.content;
+              setSimulationState((prev) => {
+                if (!prev) return prev;
+                return {
+                  ...prev,
+                  refuel_decision: {
+                    ...prev.refuel_decision,
+                    reason: accumulatedReason,
+                    is_ai_justified: true, // first chunk turns off shimmer and starts streaming
+                  }
+                };
+              });
+            }
+          } catch (e) {
+            console.error('Error parsing refuel stream JSON-line:', e);
+          }
+        }
+      }
+
+      // Re-poll to lock in full backend DB state sync
       await fetchState();
     } catch (err) {
       console.error('Error analyzing refuel:', err);
@@ -195,7 +262,7 @@ function App() {
           />
 
           {/* Level 5: AI Insights */}
-          <AIInsightPanel aiInsights={aiInsights} />
+          <AIInsightPanel aiInsights={aiInsights} scenarioId={activeScenarioId} apiBaseUrl={API_BASE_URL} />
 
           {/* Level 5: AI Chat */}
           <AIChat apiBaseUrl={API_BASE_URL} />
