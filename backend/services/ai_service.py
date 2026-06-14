@@ -52,7 +52,7 @@ def handle_ai_chat(message: str, current_state: dict) -> str:
 
     scenario_id = current_state.get("scenario_id", "A")
     analytics = current_state.get("analytics", {})
-    decision = current_state.get("refuel_decision", {})
+    decision = current_state.get("refuel_decision") or {}
     price_ctx = current_state.get("fuel_price_context", {})
 
     msg_lower = message.lower()
@@ -73,6 +73,9 @@ def handle_ai_chat(message: str, current_state: dict) -> str:
             )
 
     elif "refuel" in msg_lower or "buy" in msg_lower or "wait" in msg_lower or "price" in msg_lower:
+        if not decision:
+            return "I haven't analyzed your refuel timing for this session yet. Please click the 'Analyze Refuel Timing' button on the dashboard to calculate recommendations."
+        
         rec = decision.get("decision", "BUY")
         reason = decision.get("reason", "")
         savings = decision.get("estimated_savings", 0.0)

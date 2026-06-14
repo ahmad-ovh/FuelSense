@@ -42,7 +42,7 @@ class SimulationStateSchema(BaseModel):
     timestamp: int
     telemetry: TelemetrySchema
     analytics: AnalyticsSchema
-    refuel_decision: RefuelDecisionSchema
+    refuel_decision: Optional[RefuelDecisionSchema] = None
     fuel_price_context: FuelPriceContextSchema
     ai_insights: AIInsightsSchema
 

@@ -1,6 +1,38 @@
 import React from 'react';
 
-const RefuelDecisionCard = ({ refuel = {}, priceContext = {}, fuelLevel = 100 }) => {
+const RefuelDecisionCard = ({ refuel = null, priceContext = {}, fuelLevel = 100, onAnalyze, isLoading }) => {
+  // If refuel is null, not calculated yet, or empty, render the CTA calculation button
+  if (!refuel || !refuel.decision) {
+    return (
+      <div className="decision-card decision-neutral" style={{ minHeight: '160px', justifyContent: 'center', alignItems: 'center' }}>
+        <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '12px', width: '100%' }}>
+          <span className="decision-title" style={{ alignSelf: 'center' }}>Refuel Intelligence</span>
+          <p className="decision-reason" style={{ fontSize: '13px', color: '#94a3b8' }}>
+            Refuel timing is currently uncalculated to ensure maximum telemetry precision.
+          </p>
+          <button 
+            onClick={onAnalyze} 
+            disabled={isLoading}
+            className="chat-send-btn" 
+            style={{ 
+              alignSelf: 'center', 
+              width: 'auto', 
+              padding: '10px 24px', 
+              fontSize: '13px', 
+              fontWeight: '700', 
+              borderRadius: '24px',
+              background: 'linear-gradient(90deg, #3b82f6 0%, #1d4ed8 100%)',
+              boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)',
+              cursor: 'pointer'
+            }}
+          >
+            {isLoading ? 'Running Algorithms...' : 'Analyze Refuel Timing'}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const { decision = 'BUY', reason = 'Standard evaluation', estimated_savings = 0.0 } = refuel;
   const { current_price = 2.05, rolling_30day_avg = 2.05, trend = 'NEUTRAL' } = priceContext;
 
@@ -41,7 +73,25 @@ const RefuelDecisionCard = ({ refuel = {}, priceContext = {}, fuelLevel = 100 })
     <div className={`decision-card ${cardClass}`}>
       <div className="decision-header">
         <span className="decision-title">Refuel Intelligence</span>
-        <span className={`urgency-badge ${badgeClass}`}>{badgeText}</span>
+        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+          <button 
+            onClick={onAnalyze} 
+            disabled={isLoading}
+            style={{ 
+              background: 'rgba(255, 255, 255, 0.08)', 
+              border: 'none', 
+              color: '#94a3b8', 
+              fontSize: '9px', 
+              padding: '3px 8px', 
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontWeight: 'bold'
+            }}
+          >
+            {isLoading ? '...' : 'Recalculate'}
+          </button>
+          <span className={`urgency-badge ${badgeClass}`}>{badgeText}</span>
+        </div>
       </div>
 
       <div className="decision-value-wrapper">

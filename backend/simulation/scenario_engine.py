@@ -123,13 +123,11 @@ async def run_simulation_loop(session_id: str, scenario_id: str, tick_rate_ms: i
                     all_frames = db.query(TelemetryFrame).filter_by(session_id=session_id).all()
                     latest_analytics = calculate_analytics(scenario_id, all_frames, step, duration)
 
-                # 4. Refuel Decision (updated with analytics)
-                if step == 0 or step % 5 == 0 or latest_decision is None:
-                    latest_decision = evaluate_decision(
-                        telemetry["fuel_level_pct"],
-                        scenario["vehicle"]["tank_capacity_l"],
-                        price_context
-                    )
+                # 4. Refuel Decision (only preserved if calculated by manual request, otherwise None)
+                latest_decision = None
+                existing_state = get_latest_state(session_id)
+                if existing_state and existing_state.get("refuel_decision"):
+                    latest_decision = existing_state["refuel_decision"]
 
                 # 5. AI Explanation (updated every 15 steps)
                 if step == 0 or step % 15 == 0 or latest_ai is None:

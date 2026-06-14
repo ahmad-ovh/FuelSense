@@ -14,6 +14,24 @@ function App() {
   const [activeScenarioId, setActiveScenarioId] = useState('B'); // Default to B
   const [currentStatus, setCurrentStatus] = useState('IDLE');
   const [error, setError] = useState(null);
+  const [isRefuelLoading, setIsRefuelLoading] = useState(false);
+
+  // Trigger refuel analysis manually (on-demand)
+  const handleAnalyzeRefuel = async () => {
+    setIsRefuelLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/refuel/active`);
+      if (!response.ok) {
+        throw new Error('Failed to run refuel analysis');
+      }
+      // Re-poll state to update UI
+      await fetchState();
+    } catch (err) {
+      console.error('Error analyzing refuel:', err);
+    } finally {
+      setIsRefuelLoading(false);
+    }
+  };
 
   // Poll simulation state
   const fetchState = async () => {
@@ -134,6 +152,8 @@ function App() {
           refuel={refuel}
           priceContext={priceContext}
           fuelLevel={telemetry.fuel_level_pct || 100}
+          onAnalyze={handleAnalyzeRefuel}
+          isLoading={isRefuelLoading}
         />
 
         {/* Level 2: Eco Score Gauge */}
