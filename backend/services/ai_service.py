@@ -15,10 +15,18 @@ logger = logging.getLogger("ai_service")
 # DeepSeek Configuration
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
 DEEPSEEK_BASE_URL = os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
+FUEL_SENSE_DEMO_MODE = os.getenv("FUEL_SENSE_DEMO_MODE", "false").lower() == "true"
 
 def get_client() -> Optional[OpenAI]:
+    if FUEL_SENSE_DEMO_MODE:
+        logger.info("Demo mode active: bypassing DeepSeek API client initialization.")
+        return None
     if DEEPSEEK_API_KEY:
-        return OpenAI(api_key=DEEPSEEK_API_KEY, base_url=DEEPSEEK_BASE_URL)
+        try:
+            return OpenAI(api_key=DEEPSEEK_API_KEY, base_url=DEEPSEEK_BASE_URL)
+        except Exception as e:
+            logger.error(f"Failed to initialize OpenAI client: {e}")
+            return None
     return None
 
 # Local fallback templates to guarantee judging safety in case of network timeouts or invalid keys
