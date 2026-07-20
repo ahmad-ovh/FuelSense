@@ -7,7 +7,7 @@ import AIInsightPanel from './components/AIInsightPanel';
 import AIChat from './components/AIChat';
 import ScenarioFAB from './components/ScenarioFAB';
 
-const API_BASE_URL = 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
 function App() {
   const [simulationState, setSimulationState] = useState(null);
